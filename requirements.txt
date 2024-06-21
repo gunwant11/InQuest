@@ -1,0 +1,15 @@
+langchain
+langchain-qdrant 
+langchain-openai 
+langchain 
+python-multipart
+langchain-community
+azure-cognitiveservices-speech
+pydantic
+redis
+pypdf
+langchain_huggingface
+tenacity==8.3.0
+fastapi
+langchain-anthropic
+pydantic-settings

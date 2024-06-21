@@ -1,0 +1,11 @@
+/qdrant_data
+key.txt
+.venv
+/app/__pycache__
+/redis_data
+.env
+/__pycache__
+
+# Ignore all __pycache__ directories
+*/__pycache__/*
+***/__pycache__/*
