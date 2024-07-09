@@ -3,14 +3,22 @@ from langchain.chains import create_history_aware_retriever, create_retrieval_ch
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_qdrant import Qdrant
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_anthropic import ChatAnthropic
+from langchain_google_vertexai.model_garden import ChatAnthropicVertex
 from langchain_community.chat_message_histories import RedisChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from app.services.tts import synthesize_text
 from app.config import settings
 
-model = ChatAnthropic(model='claude-2.1', anthropic_api_key=settings.ANTHROPIC_API_KEY, max_tokens=100)
+project = "pacific-vault-426816-s6"
+location = "us-east5"
+
+model = ChatAnthropicVertex(
+    model_name="claude-3-5-sonnet@20240620",
+    project=project,
+    location=location,
+    max_tokens=250,
+)
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L12-v2")
 
 system_prompt = (
@@ -22,17 +30,13 @@ system_prompt = (
     "Do not ask for multiple pieces of information in the same question. "
     "Do not ask questions on the same topic as after a follow-up question."
     "\n\n"
+
+    "Job Description: {job_description}"
+
     "resume context: {context}"
 )
-qa_prompt = ChatPromptTemplate.from_messages(
-    [
-        ("system", system_prompt),
-        MessagesPlaceholder("chat_history"),
-        ("human", "{input}"),
-    ]
-)
 
-question_answer_chain = create_stuff_documents_chain(model, qa_prompt)
+
 
 contextualize_q_system_prompt = (
     "Given a chat history and the latest interviewee's response, "
@@ -49,7 +53,7 @@ contextualize_q_prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-async def handle_chat(chat, redis_client):
+async def handle_chat(chat):
     try:
         qdrant_db = Qdrant.from_existing_collection(
             embedding=embeddings,
@@ -61,7 +65,11 @@ async def handle_chat(chat, redis_client):
         history_aware_retriever = create_history_aware_retriever(
             model, qdrant_db.as_retriever(), contextualize_q_prompt
         )
-
+        
+        qa_prompt = qa_prompt.format_messages(
+            job_description=chat.job_description,
+        )
+        print(qa_prompt)
         question_answer_chain = create_stuff_documents_chain(model, qa_prompt)
 
         rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)

@@ -13,3 +13,5 @@ tenacity==8.3.0
 fastapi
 langchain-anthropic
 pydantic-settings
+langchain-google-vertexai
+anthropic[vertex]
