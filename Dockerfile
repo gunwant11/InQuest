@@ -5,15 +5,18 @@ RUN apt-get update && apt-get install -y libssl-dev libasound2
 COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 
-# download google cloud sdk
-RUN apt-get install -y curl
-RUN curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz
-RUN tar zxvf google-cloud-cli-linux-x86_64.tar.gz
-RUN ./google-cloud-sdk/install.sh -q
+# Install Google Cloud SDK
+RUN apt-get install -y curl gnupg
+RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+RUN apt-get update && apt-get install -y google-cloud-sdk
 
-# initialize google cloud sdk
-RUN ./google-cloud-sdk/bin/gcloud init --console-only
+# Set environment variable for service account key
+ENV GOOGLE_APPLICATION_CREDENTIALS=service-account.json
 
 COPY . .
+
+# Activate service account
+RUN gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
