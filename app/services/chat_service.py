@@ -75,7 +75,7 @@ async def handle_chat(chat):
 )
 
         qa_prompt = qa_prompt.format_messages(
-            job_description=chat.job_description,
+            job_description=chat.job_description or "fullstack developer", 
         )
         print(qa_prompt)
         question_answer_chain = create_stuff_documents_chain(model, qa_prompt)
