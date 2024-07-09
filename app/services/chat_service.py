@@ -31,7 +31,7 @@ system_prompt = (
     "Do not ask questions on the same topic as after a follow-up question."
     "\n\n"
 
-    "Job Description: {job_description}"
+    # "Job Description: {job_description}"
 
     "resume context: {context}"
 )
@@ -74,10 +74,6 @@ async def handle_chat(chat):
     ]
 )
 
-        qa_prompt = qa_prompt.format_messages(
-            job_description= "fullstack developer", 
-        )
-        print(qa_prompt)
         question_answer_chain = create_stuff_documents_chain(model, qa_prompt)
 
         rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
