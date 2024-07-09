@@ -66,6 +66,14 @@ async def handle_chat(chat):
             model, qdrant_db.as_retriever(), contextualize_q_prompt
         )
         
+        qa_prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", system_prompt),
+        MessagesPlaceholder("chat_history"),
+        ("human", "{input}"),
+    ]
+)
+
         qa_prompt = qa_prompt.format_messages(
             job_description=chat.job_description,
         )
