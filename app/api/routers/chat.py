@@ -11,7 +11,7 @@ class Chat(BaseModel):
     session_id: str
 
 @router.post("/")
-async def chat(chat: Chat, redis_client = Depends(get_redis_client)):
+async def chat(chat: Chat):
     print(chat)
-    response = await chat_service.handle_chat(chat, redis_client)
+    response = await chat_service.handle_chat(chat)
     return response
