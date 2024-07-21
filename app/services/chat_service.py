@@ -70,8 +70,9 @@ questions = [
 
 
 def get_next_question(questions, current_num):
-    if current_num//2 > len(questions):
-        return questions[-1]
+    index = current_num//2
+    if index >= len(questions):
+        return "now end the Interview with a thank you. Do not ask more question."
     return questions[current_num//2]
         
 
