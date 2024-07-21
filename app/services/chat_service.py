@@ -22,25 +22,27 @@ model = ChatAnthropicVertex(
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L12-v2")
 
 system_prompt = (
-    "You are an interviewer. You conducted an interview based on resume and job description. "
+    "You are an Technical interviewer. You conducted an interview based on resume and job description. "
     "Use the following pieces of retrieved context to ask "
-    "a question that can be answered with a short answer. "
     "Keep the question concise and to the point. "
-    "ask about education, experience, skills, or other relevant information. "
     "Do not ask for multiple pieces of information in the same question. "
-    "Do not ask questions on the same topic as after a follow-up question."
     "\n\n"
 
-    # "Job Description: {job_description}"
+    "Job Role: {role}"
+
+    "Job Description: {job_description}"
+    "\n\n"
 
     "resume context: {context}"
+    "\n\n"
+
+    "{ask_about}"
 )
 
 
 
 contextualize_q_system_prompt = (
     "Given a chat history and the latest interviewee's response, "
-    "which might reference context in the chat history, "
     "formulate a standalone question which can be understood "
     "without the chat history, but which is also relevant to the chat history. "
     "The question should be concise and to the point. "
@@ -53,7 +55,28 @@ contextualize_q_prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-async def handle_chat(chat):
+
+questions = [
+    "ask for introduction",
+    "ask by giving a code snippet and ask them the output",
+    "ask technical system design question",
+    "check the answer and ask follow-up question",
+    "ask about previous experience and challenges",
+    "ask about the project and why they chose it",
+    "ask  behavioral question",
+    "now end the Interview with a thank you. Do not ask more question."
+
+]
+
+
+def get_next_question(questions, current_num):
+    if current_num//2 > len(questions):
+        return questions[-1]
+    return questions[current_num//2]
+        
+
+
+async def handle_chat(chat, redis):
     try:
         qdrant_db = Qdrant.from_existing_collection(
             embedding=embeddings,
@@ -72,8 +95,20 @@ async def handle_chat(chat):
         MessagesPlaceholder("chat_history"),
         ("human", "{input}"),
     ]
-)
+)       
+        # from redis get the job_description, role, voice,
+        key = f"session:{chat.session_id}"
+        job_description = redis.hget(key, "job_description")
+        role = redis.hget(key, "role")
+        voice = redis.hget(key, "voice")
 
+        # from redis message history get the chat history length
+        try:
+            chat_history_length = redis.llen(f"message_store:{chat.session_id}")
+        except Exception as e:
+            chat_history_length = 0
+
+        next_question = get_next_question(questions, chat_history_length)
         question_answer_chain = create_stuff_documents_chain(model, qa_prompt)
 
         rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
@@ -85,11 +120,16 @@ async def handle_chat(chat):
             input_messages_key="input",
             history_messages_key="chat_history",
             output_messages_key="answer",
+
         )
         config = {"configurable": {"session_id": chat.session_id}}
-        response = conversational_rag_chain.invoke({"input": chat.message}, config=config)
+        response = conversational_rag_chain.invoke({"input": chat.message, 
+                                                    "role": role,
+                                                    "job_description": job_description,
+                                                    "ask_about": next_question
+                                                    }, config)
+        result = synthesize_text(response["answer"], 'male')
         
-        result = synthesize_text(response["answer"], "male")
         return {"result": result}
     except Exception as e:
         print(e)

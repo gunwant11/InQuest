@@ -11,8 +11,9 @@ async def upload_file(
     session_id: str = Form(...),
     voice: str = Form(...),
     num_questions: int = Form(...),
-    redis_client = Depends(get_redis_client)
+    redis_client = Depends(get_redis_client),
+    role: str = Form(...),
 ):
     file_content = await file.read()
-    upload_service.upload_to_qdrant(file_content, user_id, redis_client, job_description, session_id, voice, num_questions)
+    upload_service.upload_to_qdrant(file_content, user_id, redis_client, job_description, session_id, voice, num_questions, role)
     return {"status": "uploaded"}
